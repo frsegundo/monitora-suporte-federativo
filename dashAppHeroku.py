@@ -17,10 +17,9 @@ from plotly.subplots import make_subplots #necessario, pela documentacao para a 
 ###### capturando os dados
 ######
 
-enderecoBase="/Users/francisco/Dropbox/Estudos/Data/Python/dashEstados/dados.xlsx"
 enderecoAlterna="dados.xlsx"
 compilado=pd.read_excel(enderecoAlterna,sheet_name="Compilado",index_col=0)
-ICMS=pd.read_excel(enderecoBase,sheet_name="ICMS",index_col=0)
+ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
 nomeMeses=["janeiro","fevereiro","março","abril","maio"]
 
 #todosNomes é uma lista de lista, cada sublista conterá em 0 o label e em 1 o value
