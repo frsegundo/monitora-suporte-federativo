@@ -1,0 +1,4 @@
+dashEstados
+*.pyc
+.env
+.DS_Store
