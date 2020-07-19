@@ -23,12 +23,12 @@ import dash_bootstrap_components as dbc #documentaçao em https://dash-bootstrap
 enderecoAlterna="dadosTeste.xlsx"
 compilado=pd.read_excel(enderecoAlterna,sheet_name="Compilado",index_col=0)
 ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
-ICMS.fillna(0)
+IPVA=pd.read_excel(enderecoAlterna,sheet_name="IPVA",index_col=0)
 nomeMeses=["janeiro","fevereiro","março","abril","maio","junho"]
 beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentro de listaPorEstado
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
-textoArrecada='Não perdeu arrecadação.' 
-
+textoArrecada='Não perdeu arrecadação.'
+labelIPVAICMS='ICMS + IPVA Perdido'
 #todosNomes é uma lista de lista, cada sublista conterá em 0 o label e em 1 o value
 #para ser usado no dropdown da página
 todosNomes=[]
@@ -38,14 +38,14 @@ for i in range(len(compilado.index.values)):
 def truncar(numero,ncasas):
   return int(numero * (10**ncasas)) / (10**ncasas)
 
-def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado):
+def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
 
   #Criar uma lista para cada estado com os seguintes dados
   #0 - Nome dos Meses 
-  #1 - ICMS de 2019 
-  #2 - ICMS de 2020 
-  #3 - ICMS acumulado 2019 
-  #4 - ICMS acumulado 2020 
+  #1 - ICMS + IPVA de 2019 
+  #2 - ICMS + IPVA de 2020 
+  #3 - ICMS + IPVA acumulado 2019 
+  #4 - ICMS + IPVA acumulado 2020 
   #5 - diferencial absoluto dos ICMS's acumulados 
   #6 - diferencial percentual dos ICMS's acumulados 
   #7 - lista contendo as ajudas totais decorrentes de LC173_Recursos, LC173_Suspensão e MP938
@@ -66,16 +66,20 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado):
   #a premissa é que se não tem o mês n em 2019, tmb não o terá em 2020
   flagAtualizado=True
   listaTeste=ICMS.loc[EstadoAlvo].iloc[selecao2019].tolist() #os valores de icms de 2019
-  ###### não está entrando no próximo if, pq os 0 da planilha são importados como nan
-
+  #o que vai mudar são os ranges de selecao, um para cada caso (atualizadou ou nao atualizado)
   if listaTeste[-1]!=listaTeste[-1]: #só vai ser true se for NaN
     flagAtualizado=False #vai dar false se não tiver dados para o último mês
     selecao2019=list(range(0,NMeses-1)) 
     selecao2020=list(range(NMeses,NMeses*2-1))
     NMeses=NMeses-1
 
-  dadosEstado.append(ICMS.loc[EstadoAlvo].iloc[selecao2019].tolist()) #adicionando os valores de ICMS de 2019
-  dadosEstado.append(ICMS.loc[EstadoAlvo].iloc[selecao2020].tolist()) #adicionando os valores de ICMS de 2020
+  #somando as listas ICMS e IPVA, elemento a elemento
+  ICMS19=ICMS.loc[EstadoAlvo].iloc[selecao2019].tolist()
+  ICMS20=ICMS.loc[EstadoAlvo].iloc[selecao2020].tolist()
+  IPVA19=IPVA.loc[EstadoAlvo].iloc[selecao2019].tolist()
+  IPVA20=IPVA.loc[EstadoAlvo].iloc[selecao2020].tolist()
+  dadosEstado.append([sum(x) for x in zip(ICMS19, IPVA19)]) #adicionando os valores de ICMS + IPVA de 2019
+  dadosEstado.append([sum(x) for x in zip(ICMS20, IPVA20)]) #adicionando os valores de ICMS + IPVA de 2020
 
   #fazendo o acumulado de 2019 e de 2020 e os diferenciais absolutos e percentuais
   dadosEstado.append([])
@@ -101,8 +105,9 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado):
 
   return dadosEstado
 
-def retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado):
-  dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado)
+def retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
+  #esse indice é o total do suporte recebido sobre o delta da arrecadacao acumulada
+  dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
   if dadosEstado[5][-1] >= 0 :
     testeSuficiencia = textoArrecada 
   else:
@@ -111,6 +116,17 @@ def retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado):
   
   return testeSuficiencia
 
+def retornaSufNew(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
+  #esse indice é o acumulado de 2020 + suporte dividido pelo acumulado de 2019
+  dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
+  acumulado2020=dadosEstado[4][-1]
+  acumulado2019=dadosEstado[3][-1]
+  suporte173=dadosEstado[7][1]+dadosEstado[7][2]
+  print(EstadoAlvo)
+  print(acumulado2020)
+  print(suporte173)
+  return (acumulado2020+suporte173)/acumulado2019
+
 
 def retonarDf(EstadoAlvo,nomeMeses,ICMS,compilado):
   #vai retornar uma lista de dataFrames, com a seguinte estrutura
@@ -118,24 +134,21 @@ def retonarDf(EstadoAlvo,nomeMeses,ICMS,compilado):
   # 1 - dataframe contendo os dados de total e de icms perdido até agora
   # 2 - dataframe contendo o índice de suficiencia
   # 3 - dataframe empilhando soma do suporte, perda de arrecadacao e perda de suficiencia
-  # 4 - dataframe linha contendo Recursos Detalhados, Soma do Suporte, Perda de ICMS
+  # 4 - dataframe linha contendo Recursos Detalhados, Soma do Suporte, Perda de ICMS + IPVA
   listadeDF=[]
   #primeiro item
-  dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado)
+  dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
   dataF = pd.DataFrame({'Recursos MP938': [dadosEstado[7][0]],
                    'Recursos LC 173': [dadosEstado[7][1]],
                    'Suspensão de Dívida LC173': [dadosEstado[7][2]]}, index=[EstadoAlvo])
   listadeDF.append(dataF)
   #segundo item
   dataF = pd.DataFrame({'Suporte Financeiro': [sum(dadosEstado[7])],
-                   'ICMS Perdido': [dadosEstado[5][-1]]}, index=[EstadoAlvo])
+                   labelIPVAICMS: [dadosEstado[5][-1]]}, index=[EstadoAlvo])
   listadeDF.append(dataF)
   #terceiro item
   label='Suficiência do Suporte (1)'
-  if dadosEstado[5][-1] >= 0 :
-    dataF = pd.DataFrame({label: [textoArrecada]}, index=[EstadoAlvo])  
-  else:
-    dataF = pd.DataFrame({label: [percentualToString(retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado))]}, index=[EstadoAlvo])
+  dataF = pd.DataFrame({label: [percentualToString(retornaSufNew(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA))]}, index=[EstadoAlvo])
   
   listadeDF.append(dataF)
 
@@ -143,8 +156,8 @@ def retonarDf(EstadoAlvo,nomeMeses,ICMS,compilado):
   dataTab=[]
   nomeColunas=[compilado.loc[EstadoAlvo,'UF_nome'],'Valores']
   dataTab.append(['Recursos Recebidos',sum(dadosEstado[7])])
-  dataTab.append(['ICMS Perdido',dadosEstado[5][-1]])
-  dataTab.append(['Suficiência do Suporte',retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado)])
+  dataTab.append([labelIPVAICMS,dadosEstado[5][-1]])
+  dataTab.append(['Suficiência do Suporte',retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)])
   listadeDF.append(pd.DataFrame(dataTab,columns=nomeColunas))
 
   # quinto item
@@ -152,7 +165,8 @@ def retonarDf(EstadoAlvo,nomeMeses,ICMS,compilado):
                    'Recursos LC 173': [numToMString(dadosEstado[7][1])],
                    'Suspensão de Dívida LC173 (2)': [numToMString(dadosEstado[7][2])],
                    'Total do Suporte':[numToMString(sum(dadosEstado[7]))],
-                   'ICMS Perdido':[numToMString(dadosEstado[5][-1])]}, index=[EstadoAlvo])
+                   #multipliquei o próximo por -1 para manter o padrão de perda positiva, ganho negativo
+                   labelIPVAICMS:[numToMString(-1*dadosEstado[5][-1])]}, index=[EstadoAlvo])
   listadeDF.append(dataF)
 
   return listadeDF
@@ -166,7 +180,7 @@ def listaPorEstado(nomeMeses,ICMS,compilado,todosNomes):
   eixoyArrecad=[]
   for item in todosNomes:
     if item[1] != beginner:
-      dadosEstado=retornaListaEstado(item[1],nomeMeses,ICMS,compilado)
+      dadosEstado=retornaListaEstado(item[1],nomeMeses,ICMS,compilado,IPVA)
       eixoX.append(item[0])
       eixoySuporte.append(dadosEstado[7][1]+dadosEstado[7][2])
       eixoyArrecad.append(-1*dadosEstado[5][-1])
@@ -196,7 +210,7 @@ def ICMSatualizado(nomeMeses,ICMS,compilado):
   contador=0
   for item in todosNomes:
     if item[1] != beginner:
-      if retornaListaEstado(item[1],nomeMeses,ICMS,compilado)[8]==False:
+      if retornaListaEstado(item[1],nomeMeses,ICMS,compilado,IPVA)[8]==False:
         teste=False
         contador +=1
   return [teste,contador]
@@ -215,7 +229,7 @@ server=app.server #li em um tutorial q era necessario p o heroku
 app.title='LC 173 Monitora'
 app.css.append_css({'external_url': 'https://codepen.io/amyoshino/pen/jzXypZ.css'}) #Bootstrap CSS
 
-obs1="(1) Suficência do suporte é o total do suporte recebido nos termos da 173 (Repasse de Recursos + Suspensão de Dívida) / perda de ICMS de 2020 em relação à 2019"
+obs1="(1) Suficência do suporte é o [Total do suporte recebido nos termos da 173 + Arrecadacao (IPVA+ICMS) acumulada de 2020] / Arrecadacao (IPVA+ICMS) acumulada de 2019"
 obs2="(2) Suspensão de dívida = União + Instituições Financeiras Públicas"
 obs3="(3) Em verde os Estados que não apresentaram perda de arrecadação"
 
@@ -229,7 +243,8 @@ if alertaUpToDate[0]==False:
     textoAlerta=str(alertaUpToDate[1]) + " Estados ainda não atualizaram os dados de arrecadação para " + nomeMeses[-1]
   else:
     textoAlerta="1 Estado ainda não atualizou os dados de arrecadação para " + nomeMeses[-1]
-
+#cor do texto de perda de arrecadacao
+corArrecad='black'
 #
 # estilos para o layout
 #
@@ -296,7 +311,13 @@ app.layout = html.Div([
             id='tabelaRecursos',
             columns=[{"name": i, "id": i} for i in retonarDf(beginner,nomeMeses,ICMS,compilado)[4].columns],
             data=retonarDf(beginner,nomeMeses,ICMS,compilado)[4].to_dict('records'),
-            style_cell={'textAlign': 'center'} ) ,
+            style_cell={'textAlign': 'center'},
+            style_data_conditional=[
+            {'if': {'column_id': labelIPVAICMS},
+             'color': corArrecad,
+             'fontWeight': 'bold'},] 
+        ) ,
+
     ], ),width={"size": 10, "offset": 1})
         ), #fim da quarta row
 
@@ -371,7 +392,7 @@ app.layout = html.Div([
 #Após o callback, teremos a função que fará o update no output de acordo com o valor (value) recebido (sacou?!?!)
 def update_output(value):
 
-    dadosEstado=retornaListaEstado(value,nomeMeses,ICMS,compilado)
+    dadosEstado=retornaListaEstado(value,nomeMeses,ICMS,compilado,IPVA)
 
     graficoICMS = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -386,7 +407,7 @@ def update_output(value):
     )
     # Add figure title
     graficoICMS.update_layout(
-        title_text="Arrecadação Acumulada de ICMS - 2020 vs. 2019",
+        title_text="Arrecadação Acumulada de ICMS + IPCA -> 2020 vs. 2019",
         legend_orientation="h"
     )
   
@@ -404,6 +425,18 @@ def update_selected_row_indices(value):
 @app.callback( Output('tabelaRecursos', 'data'),[Input('uf-dropdown', 'value')])
 def update_selected_row_indices(value):
     return retonarDf(value,nomeMeses,ICMS,compilado)[4].to_dict('records')
+
+@app.callback( Output('tabelaRecursos', 'style_data_conditional'),[Input('uf-dropdown', 'value')])
+def update_selected_row_indices(value):
+    if retornaSuficiencia(value,nomeMeses,ICMS,compilado,IPVA) != textoArrecada:
+        corArrecad='tomato' #quando perde arrecadação
+    else:
+        corArrecad='green'  # quando ganha arrecadação
+    estilo=[
+            {'if': {'column_id': labelIPVAICMS},
+             'color': corArrecad,
+             'fontWeight': 'bold'}]
+    return estilo
 
 @app.callback( Output('graficoEstados','figure'), [Input('uf-dropdown','value')])
 #Após o callback, teremos a função que fará o update no output de acordo com o valor (value) recebido (sacou?!?!)
@@ -459,10 +492,7 @@ def update_output(value):
   for item in todosNomes:
     if item[1]!= beginner:
       eixoxSuf.append(item[0])
-      if retornaSuficiencia(item[1],nomeMeses,ICMS,compilado) != textoArrecada:
-        indicesSuficiencia.append(100*retornaSuficiencia(item[1],nomeMeses,ICMS,compilado))
-      else:
-        indicesSuficiencia.append(0)
+      indicesSuficiencia.append(100*retornaSufNew(item[1],nomeMeses,ICMS,compilado,IPVA))
 
   graficoSuf=go.Figure()
 
@@ -512,6 +542,7 @@ def update_output(value):
     bargap=0.15, # gap between bars of adjacent location coordinates.
     bargroupgap=0.1 # gap between bars of the same location coordinate.
   )
+  graficoSuf.update_yaxes(range=[75, 200]) # eixo y da figura customizado manualmente
   return graficoSuf
 
 #não esqueça desta linha para conseguir rodar sua aplicação
