@@ -24,11 +24,16 @@ enderecoAlterna="dadosTeste.xlsx"
 compilado=pd.read_excel(enderecoAlterna,sheet_name="Compilado",index_col=0)
 ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
 IPVA=pd.read_excel(enderecoAlterna,sheet_name="IPVA",index_col=0)
+Rec173=pd.read_excel(enderecoAlterna,sheet_name="Recursos173",index_col=0)
+Sus173=pd.read_excel(enderecoAlterna,sheet_name="Suspensao173",index_col=0)
 nomeMeses=["janeiro","fevereiro","março","abril","maio","junho"]
 beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentro de listaPorEstado
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
 textoArrecada='Não perdeu arrecadação.'
 labelIPVAICMS='ICMS + IPVA Perdido'
+
+cotaparteICMS=0.75
+cotaparteIPVA=0.5
 #todosNomes é uma lista de lista, cada sublista conterá em 0 o label e em 1 o value
 #para ser usado no dropdown da página
 todosNomes=[]
@@ -50,6 +55,8 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   #6 - diferencial percentual dos ICMS's acumulados 
   #7 - lista contendo as ajudas totais decorrentes de LC173_Recursos, LC173_Suspensão e MP938
   #8 - True se estiver atualizado, false se estiver desatualizado
+  #9 - Lista com os diferenciais %, mês contra mês
+
 
   dadosEstado=[]
   NMeses=len(nomeMeses)
@@ -75,9 +82,13 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
 
   #somando as listas ICMS e IPVA, elemento a elemento
   ICMS19=ICMS.loc[EstadoAlvo].iloc[selecao2019].tolist()
+  ICMS19 = [x * cotaparteICMS for x in ICMS19]
   ICMS20=ICMS.loc[EstadoAlvo].iloc[selecao2020].tolist()
+  ICMS20 = [x * cotaparteICMS for x in ICMS20]
   IPVA19=IPVA.loc[EstadoAlvo].iloc[selecao2019].tolist()
+  IPVA19 = [x * cotaparteIPVA for x in IPVA19]
   IPVA20=IPVA.loc[EstadoAlvo].iloc[selecao2020].tolist()
+  IPVA20 = [x * cotaparteIPVA for x in IPVA20]
   dadosEstado.append([sum(x) for x in zip(ICMS19, IPVA19)]) #adicionando os valores de ICMS + IPVA de 2019
   dadosEstado.append([sum(x) for x in zip(ICMS20, IPVA20)]) #adicionando os valores de ICMS + IPVA de 2020
 
@@ -103,6 +114,9 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   #adicionando o teste para saber se está atualizado
   dadosEstado.append(flagAtualizado)
 
+  #adicionando os diferenciais % mes contra mes
+  dadosEstado.append([(i20/i19-1) for i19,i20 in zip(ICMS19, ICMS20)]) #adicionando os valores de ICMS + IPVA de 2019
+
   return dadosEstado
 
 def retornaSuficiencia(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
@@ -122,9 +136,6 @@ def retornaSufNew(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   acumulado2020=dadosEstado[4][-1]
   acumulado2019=dadosEstado[3][-1]
   suporte173=dadosEstado[7][1]+dadosEstado[7][2]
-  print(EstadoAlvo)
-  print(acumulado2020)
-  print(suporte173)
   return (acumulado2020+suporte173)/acumulado2019
 
 
@@ -215,12 +226,43 @@ def ICMSatualizado(nomeMeses,ICMS,compilado):
         contador +=1
   return [teste,contador]
 
+def dadosMesMes(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173):
+  #retorna os eixos para o gráfico mês a mês
+  #para cada mês duas barras, uma de 2019 e outra de 2020
+  #Arrecadação vs Arrecadação + 173
+  #item 0 de eixos - nomes dos eixos de x
+  #item 1 de eixos - barras de 2019
+  #item 2 de eixos - barras de 2020, arrecadacao
+  #item 3 de eixos - Recursos 173 + Suspensao, mes a mes
+  dadosTemp=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
+  mm=[]
+  if dadosTemp[8]:
+    rangeSelecao=list(range(0,len(nomeMeses)))
+    mm.append(nomeMeses)
+  else:
+    rangeSelecao=list(range(0,len(nomeMeses)-1))
+    mm.append(nomeMeses[:-1]) #passa todos os meses, exceto o último
+
+  mm.append(dadosTemp[1]) #arrecadacao 2019 mes a mes
+  mm.append(dadosTemp[2]) #arrecadacao 2020 mes a mes
+
+  Rec173mm=Rec173.loc[EstadoAlvo].iloc[rangeSelecao].tolist()
+  Sus173mm=Sus173.loc[EstadoAlvo].iloc[rangeSelecao].tolist()
+
+  mm.append([sum(x) for x in zip(Rec173mm, Sus173mm)]) #suporte 173 mes a mes
+
+
+  return mm
+
+
+
 
 ####
 ####
 #### SITE
 ####
 ####
+
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -230,7 +272,7 @@ app.title='LC 173 Monitora'
 app.css.append_css({'external_url': 'https://codepen.io/amyoshino/pen/jzXypZ.css'}) #Bootstrap CSS
 
 obs1="(1) Suficência do suporte é o [Total do suporte recebido nos termos da 173 + Arrecadacao (IPVA+ICMS) acumulada de 2020] / Arrecadacao (IPVA+ICMS) acumulada de 2019"
-obs2="(2) Suspensão de dívida = União + Instituições Financeiras Públicas"
+obs2="(2) Suspensão de dívida com a União"
 obs3="(3) Em verde os Estados que não apresentaram perda de arrecadação"
 
 #alerta de ICMS desatualizado
@@ -325,7 +367,7 @@ app.layout = html.Div([
   dbc.Row(
     dbc.Col(
       html.Div([
-          dcc.Graph(id='graficoEstados'),
+          dcc.Graph(id='graficoMM'),
         ]), width={"size": 10, "offset": 1})
   ), #fim da sexta row
 
@@ -336,7 +378,12 @@ app.layout = html.Div([
         ]), width={"size": 10, "offset": 1})
   ), #fim da sétima row
 
-
+  dbc.Row(
+    dbc.Col(
+      html.Div([
+          dcc.Graph(id='graficoEstados'),
+        ]), width={"size": 10, "offset": 1})
+  ), #fim da row
 
    dbc.Row(
       dbc.Col(
@@ -397,17 +444,17 @@ def update_output(value):
     graficoICMS = make_subplots(specs=[[{"secondary_y": True}]])
 
     graficoICMS.add_trace(
-        go.Bar(x=nomeMeses, y=dadosEstado[5], name="Diferencial Absoluto"),
+        go.Bar(x=nomeMeses, y=dadosEstado[9], name="Diferencial Percentual Mês a Mês"),
         secondary_y=False,
     )
     # adicionando as series
     graficoICMS.add_trace(
-        go.Scatter(x=nomeMeses, y=dadosEstado[6], name="Diferencial Percentual"),
+        go.Scatter(x=nomeMeses, y=dadosEstado[6], name="Diferencial Percentual do Acumulado"),
         secondary_y=True,
     )
     # Add figure title
     graficoICMS.update_layout(
-        title_text="Arrecadação Acumulada de ICMS + IPCA -> 2020 vs. 2019",
+        title_text="Arrecadação ICMS + IPCA -> 2020 vs. 2019",
         legend_orientation="h"
     )
   
@@ -482,6 +529,27 @@ def update_output(value):
     )
 
     return graficoEstados
+
+@app.callback( Output('graficoMM','figure'), [Input('uf-dropdown','value')])
+#Após o callback, teremos a função que fará o update no output de acordo com o valor (value) recebido
+def update_output(value):
+
+    eixosMM=dadosMesMes(value,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173) #retorna os eixos já prontos
+
+    tempEmpilhado=[sum(x) for x in zip(eixosMM[2], eixosMM[3])]
+
+    graficoMesMes=go.Figure(
+      #inicio graficoMesMes
+      data=[
+        go.Bar(name="Arrecadação 2019",x=eixosMM[0],y=eixosMM[1],offsetgroup=0,marker_color='rgb(55, 83, 109)'),
+        go.Bar(name="Arrecadação 2020 + Suporte LC 173",x=eixosMM[0],y=tempEmpilhado,offsetgroup=1,marker_color='rgb(110, 80, 10)'),
+        go.Bar(name="Suporte LC 173",x=eixosMM[0],y=eixosMM[3],offsetgroup=1,marker_color='rgb(229, 165, 17)')
+      ],
+      layout=go.Layout(title='Arrecadação (ICMS + IPVA) e Suporte (LC 173) - Mês a Mês',yaxis_title='em R$',legend_orientation="h")
+      #fim graficoMesMes
+      )
+
+    return graficoMesMes
 
 @app.callback( Output('graficoISuficiencia','figure'), [Input('uf-dropdown','value')])
 #Após o callback, teremos a função que fará o update no output de acordo com o valor (value) recebido (sacou?!?!)
