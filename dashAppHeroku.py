@@ -135,6 +135,8 @@ def retornaSufNew(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   dadosEstado=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
   acumulado2020=dadosEstado[4][-1]
   acumulado2019=dadosEstado[3][-1]
+  nrange=len(nomeMeses)
+
   suporte173=dadosEstado[7][1]+dadosEstado[7][2]
   return (acumulado2020+suporte173)/acumulado2019
 
@@ -173,7 +175,7 @@ def retonarDf(EstadoAlvo,nomeMeses,ICMS,compilado):
 
   # quinto item
   dataF = pd.DataFrame({'Recursos MP938': [numToMString(dadosEstado[7][0])],
-                   'Recursos LC 173': [numToMString(dadosEstado[7][1])],
+                   'Transferências LC 173': [numToMString(dadosEstado[7][1])],
                    'Suspensão de Dívida LC173 (2)': [numToMString(dadosEstado[7][2])],
                    'Total do Suporte':[numToMString(sum(dadosEstado[7]))],
                    #multipliquei o próximo por -1 para manter o padrão de perda positiva, ganho negativo
@@ -234,6 +236,7 @@ def dadosMesMes(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173):
   #item 1 de eixos - barras de 2019
   #item 2 de eixos - barras de 2020, arrecadacao
   #item 3 de eixos - Recursos 173 + Suspensao, mes a mes
+  #item 4 de eixos - Lista com [0] Recursos 173 e [1] Suspensão 173
   dadosTemp=retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA)
   mm=[]
   if dadosTemp[8]:
@@ -251,10 +254,11 @@ def dadosMesMes(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173):
 
   mm.append([sum(x) for x in zip(Rec173mm, Sus173mm)]) #suporte 173 mes a mes
 
+  mm.append([Rec173mm,Sus173mm])
 
   return mm
 
-
+print(dadosMesMes('SP',nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173)[4])
 
 
 ####
@@ -454,7 +458,7 @@ def update_output(value):
     )
     # Add figure title
     graficoICMS.update_layout(
-        title_text="Arrecadação ICMS + IPCA -> 2020 vs. 2019",
+        title_text="Arrecadação ICMS + IPVA -> 2020 vs. 2019",
         legend_orientation="h"
     )
   
@@ -610,7 +614,7 @@ def update_output(value):
     bargap=0.15, # gap between bars of adjacent location coordinates.
     bargroupgap=0.1 # gap between bars of the same location coordinate.
   )
-  graficoSuf.update_yaxes(range=[75, 200]) # eixo y da figura customizado manualmente
+  graficoSuf.update_yaxes(range=[50, 160]) # eixo y da figura customizado manualmente
   return graficoSuf
 
 #não esqueça desta linha para conseguir rodar sua aplicação
