@@ -31,6 +31,7 @@ beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentr
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
 textoArrecada='Não perdeu arrecadação.'
 labelIPVAICMS='ICMS + IPVA Perdido'
+bilhao=10**9
 
 cotaparteICMS=0.75
 cotaparteIPVA=0.5
@@ -258,7 +259,6 @@ def dadosMesMes(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173):
 
   return mm
 
-print(dadosMesMes('SP',nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173)[4])
 
 
 ####
@@ -404,7 +404,7 @@ app.layout = html.Div([
               html.H5("Recursos LC 173", className="card-title"),
               html.P(
                   "Repasse de recursos definidos no Art. 5 da Lei Complementar 173, de 2020.  "
-                  "Dados atualizados com as parcelas de 09jun e 13jul. Duas parcelas ainda pendentes."
+                  "Dados atualizados com as parcelas de 09jun. Parcela de 13jul já foi paga. Duas parcelas ainda pendentes."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
@@ -448,13 +448,13 @@ def update_output(value):
     graficoICMS = make_subplots(specs=[[{"secondary_y": True}]])
 
     graficoICMS.add_trace(
-        go.Bar(x=nomeMeses, y=dadosEstado[9], name="Diferencial Percentual Mês a Mês"),
+        go.Bar(x=nomeMeses, y=dadosEstado[9], name="Mês contra Mês"),
         secondary_y=False,
     )
     # adicionando as series
     graficoICMS.add_trace(
-        go.Scatter(x=nomeMeses, y=dadosEstado[6], name="Diferencial Percentual do Acumulado"),
-        secondary_y=True,
+        go.Scatter(x=nomeMeses, y=dadosEstado[6], name="Acumulado"),
+        secondary_y=False, #se algum desses for true, habilita um segundo eixo
     )
     # Add figure title
     graficoICMS.update_layout(
@@ -463,8 +463,8 @@ def update_output(value):
     )
   
     # Set y-axes titles
-    graficoICMS.update_yaxes(title_text="Diferença % Acumulada", secondary_y=True)
-    graficoICMS.update_yaxes(title_text="Diferença % Mês a Mês", secondary_y=False)
+    #graficoICMS.update_yaxes(title_text="Diferença % Acumulada", secondary_y=True)
+    graficoICMS.update_yaxes(title_text="Diferença %", secondary_y=False)
     return graficoICMS
 
 #nos proximos callbacks utilizaremos o dropdown como input para as 3 tabelas
@@ -541,17 +541,21 @@ def update_output(value):
     eixosMM=dadosMesMes(value,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173) #retorna os eixos já prontos
 
     tempEmpilhado=[sum(x) for x in zip(eixosMM[2], eixosMM[3])]
+    #rotulos dos graficos de barra
+    labelsBarra1=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in eixosMM[1]]
+    labelsBarra2=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in tempEmpilhado]
 
     graficoMesMes=go.Figure(
       #inicio graficoMesMes
       data=[
-        go.Bar(name="Arrecadação 2019",x=eixosMM[0],y=eixosMM[1],offsetgroup=0,marker_color='rgb(55, 83, 109)'),
-        go.Bar(name="Arrecadação 2020 + Suporte LC 173",x=eixosMM[0],y=tempEmpilhado,offsetgroup=1,marker_color='rgb(229, 165, 17)'),
+        go.Bar(name="Arrecadação 2019",x=eixosMM[0],y=eixosMM[1],offsetgroup=0,marker_color='rgb(55, 83, 109)',text=labelsBarra1,textposition='outside'),
+        go.Bar(name="Arrecadação 2020 + Suporte LC 173",x=eixosMM[0],y=tempEmpilhado,offsetgroup=1,marker_color='rgb(229, 165, 17)',text=labelsBarra2,textposition='outside'),
         go.Bar(name="Arrecadação 2020",x=eixosMM[0],y=eixosMM[2],offsetgroup=1,marker_color='rgb(110, 80, 10)')
       ],
       layout=go.Layout(title='Arrecadação (ICMS + IPVA) e Suporte (LC 173) - Mês a Mês',yaxis_title='em R$',legend_orientation="h")
       #fim graficoMesMes
       )
+    graficoMesMes.update_yaxes(range=[0, 50*bilhao])
 
     return graficoMesMes
 
