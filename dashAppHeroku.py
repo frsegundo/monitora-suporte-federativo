@@ -555,7 +555,6 @@ def update_output(value):
       layout=go.Layout(title='Arrecadação (ICMS + IPVA) e Suporte (LC 173) - Mês a Mês',yaxis_title='em R$',legend_orientation="h")
       #fim graficoMesMes
       )
-    graficoMesMes.update_yaxes(range=[0, 50*bilhao])
 
     return graficoMesMes
 
