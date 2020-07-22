@@ -32,6 +32,7 @@ benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices q
 textoArrecada='Não perdeu arrecadação.'
 labelIPVAICMS='ICMS + IPVA Perdido'
 bilhao=10**9
+milhao=10**6
 
 cotaparteICMS=0.75
 cotaparteIPVA=0.5
@@ -542,8 +543,12 @@ def update_output(value):
 
     tempEmpilhado=[sum(x) for x in zip(eixosMM[2], eixosMM[3])]
     #rotulos dos graficos de barra
-    labelsBarra1=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in eixosMM[1]]
-    labelsBarra2=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in tempEmpilhado]
+    if eixosMM[1][0]<bilhao:
+      labelsBarra1=[(str(truncar(elemento/milhao,1))+ ' M') for elemento in eixosMM[1]]
+      labelsBarra2=[(str(truncar(elemento/milhao,1))+ ' M') for elemento in tempEmpilhado]
+    else:
+      labelsBarra1=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in eixosMM[1]]
+      labelsBarra2=[(str(truncar(elemento/bilhao,1))+ ' bi') for elemento in tempEmpilhado]
 
     graficoMesMes=go.Figure(
       #inicio graficoMesMes
