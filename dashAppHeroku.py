@@ -28,7 +28,7 @@ ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
 IPVA=pd.read_excel(enderecoAlterna,sheet_name="IPVA",index_col=0)
 Rec173=pd.read_excel(enderecoAlterna,sheet_name="Recursos173",index_col=0)
 Sus173=pd.read_excel(enderecoAlterna,sheet_name="Suspensao173",index_col=0)
-nomeMeses=["janeiro","fevereiro","março","abril","maio","junho","julho"]
+nomeMeses=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto"]
 beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentro de listaPorEstado
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
 textoArrecada='Não perdeu arrecadação.'
@@ -505,15 +505,15 @@ app.layout = html.Div([
             dbc.CardBody([
               html.H5("MP 938", className="card-title"),
               html.P(
-                  "Recomposição, por 4 meses, dos repasses de FPM e de FPE ao nível do que foi realizado em 2019. "
-                  "Atualizado com os 4 pagamentos já realizados. A ser atualizado com a nova rodada de recomposição de acordo com o PLV 26/20."
+                  "Recomposição dos repasses de FPM e de FPE ao nível do que foi realizado em 2019. "
+                  "Atualizado com os 6 pagamentos já realizados até setembro, já considerando a nova rodada de recomposição de acordo com o PLV 26/20."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
               html.H5("Recursos LC 173", className="card-title"),
               html.P(
                   "Repasse de recursos definidos no Art. 5 da Lei Complementar 173, de 2020.  "
-                  "Dados atualizados com as parcelas de 09jun e 13jul. Parcela de 12ago já foi paga. Uma parcela pendente."
+                  "Dados atualizados com as parcelas de 09jun, 13jul e 12ago."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
@@ -730,7 +730,7 @@ def update_output(value):
     bargap=0.15, # gap between bars of adjacent location coordinates.
     bargroupgap=0.1 # gap between bars of the same location coordinate.
   )
-  graficoSuf.update_yaxes(range=[70, 170]) # eixo y da figura customizado manualmente
+  graficoSuf.update_yaxes(range=[80, 180]) # eixo y da figura customizado manualmente
   return graficoSuf
 
 
