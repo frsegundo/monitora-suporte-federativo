@@ -730,7 +730,7 @@ def update_output(value):
     bargap=0.15, # gap between bars of adjacent location coordinates.
     bargroupgap=0.1 # gap between bars of the same location coordinate.
   )
-  graficoSuf.update_yaxes(range=[80, 180]) # eixo y da figura customizado manualmente
+  graficoSuf.update_yaxes(range=[80, 200]) # eixo y da figura customizado manualmente
   return graficoSuf
 
 
