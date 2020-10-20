@@ -20,13 +20,15 @@ import dash_bootstrap_components as dbc #documentaçao em https://dash-bootstrap
 ###### capturando os dados
 ######
 
+##### ESTADOS
+
 enderecoAlterna="dadosTeste.xlsx"
 compilado=pd.read_excel(enderecoAlterna,sheet_name="Compilado",index_col=0)
 ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
 IPVA=pd.read_excel(enderecoAlterna,sheet_name="IPVA",index_col=0)
 Rec173=pd.read_excel(enderecoAlterna,sheet_name="Recursos173",index_col=0)
 Sus173=pd.read_excel(enderecoAlterna,sheet_name="Suspensao173",index_col=0)
-nomeMeses=["janeiro","fevereiro","março","abril","maio","junho"]
+nomeMeses=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro"]
 beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentro de listaPorEstado
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
 textoArrecada='Não perdeu arrecadação.'
@@ -41,6 +43,10 @@ cotaparteIPVA=0.5
 todosNomes=[]
 for i in range(len(compilado.index.values)):
     todosNomes.append([compilado['UF_nome'][i],compilado.index.values[i]])
+
+
+
+
 
 def truncar(numero,ncasas):
   return int(numero * (10**ncasas)) / (10**ncasas)
@@ -117,7 +123,7 @@ def retornaListaEstado(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   dadosEstado.append(flagAtualizado)
 
   #adicionando os diferenciais % mes contra mes
-  dadosEstado.append([100*(i20/i19-1) for i19,i20 in zip(ICMS19, ICMS20)]) #adicionando os valores de ICMS + IPVA de 2019
+  dadosEstado.append([100*(i20/i19-1) for i19,i20 in zip(dadosEstado[1], dadosEstado[2])]) #adicionando os valores de ICMS + IPVA de 2019
 
   return dadosEstado
 
@@ -138,7 +144,6 @@ def retornaSufNew(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA):
   acumulado2020=dadosEstado[4][-1]
   acumulado2019=dadosEstado[3][-1]
   nrange=len(nomeMeses)
-
   suporte173=dadosEstado[7][1]+dadosEstado[7][2]
   return (acumulado2020+suporte173)/acumulado2019
 
@@ -260,6 +265,86 @@ def dadosMesMes(EstadoAlvo,nomeMeses,ICMS,compilado,IPVA,Rec173,Sus173):
 
   return mm
 
+def retornaLinha(CidadeAlvo,listaAlvo,indiceLista):
+  #dada uma determinada lista, retorna a linha dessa lista que contenha aquela cidade
+  linhaRetorno=[]
+  for linha in listaAlvo:
+    if linha[indiceLista] == CidadeAlvo:
+      linhaRetorno=linha
+  return linhaRetorno
+
+#### dados de cidades
+
+mesesCidades=['Janeiro','Fevereiro','Março','Abril','Maio','Junho']
+
+arrecadMun=pd.read_excel(enderecoAlterna,sheet_name="MunicipiosArrecadacao",index_col=0).values.tolist()
+iniCapitais=pd.read_excel(enderecoAlterna,sheet_name="Capitais").values.tolist()
+
+
+# a próxima lista vai ter a seguinte estrutura
+# em 0 e 1, código e nome da cidade, respectivamente
+# em 2 o auxílio da 173
+# de 3 em diante, nMeses pares de Receita Corrente e FPM
+dadosCapitais=[]
+for cidade in iniCapitais: 
+  listaTemp=[str(cidade[0]),cidade[1],cidade[2]]
+  for dArrecad in arrecadMun[:-3]: #tirei do loop as duas últimas linhas, que sao compilacoes de cidades medias e grandes
+    #vai procurar os dados de arrecadação de cada cidade
+    codIBGE=str(truncar(dArrecad[0],0))[:-2] #trunco, para ter ctza que tem uma casa, depois tiro o ponto e a casa
+    if listaTemp[0] == codIBGE:
+      listaTemp=listaTemp + dArrecad[1:]
+      dadosCapitais.append(listaTemp) #so vai para dados Capitais se tiver dados de arrecadacao
+#criando um total na parte inferior
+listaSoma=[0] * (len(dadosCapitais[0])-2) #cria uma lista de 0 eliminando os dois primeiros itens, que não são numéricos
+for cidade in dadosCapitais:
+   listaSoma=([sum(x) for x in zip(listaSoma, cidade[2:])]) #somando linha a linha da lista
+dadosCapitais.append(['Capitais','Capitais']+listaSoma)
+
+#adicionando as duas ultimas linhas de arrecadMun, cidades grandes e medias
+cidadesMd=arrecadMun[-2][1:] #tirei o primeiro elemento, pois esse é so uma label
+cidMdLab='Entre 100 mil e 500 mil hab. (s/ capitais)'
+aux173Md=0 #futuramente, se quiser inserir o auxílio para os municípios demais, é aqui
+cidadesGd=arrecadMun[-1][1:]
+cidGdLab='Acima de 500 mil hab. (s/ capitais)'
+aux173Gd=0
+dadosCapitais.append([cidMdLab,cidMdLab,aux173Md]+cidadesMd)
+dadosCapitais.append([cidGdLab,cidGdLab,aux173Gd]+cidadesGd)
+
+
+fluxoCapitais=[]
+# a partir de dados capitais vou construir outra lista com os fluxos mes a mes
+# em 0 e 1, código e nome da cidade, respectivamente
+# em 2, Receita Corrente - FPM daquele mês em 2019
+# em 3, Receita Corrente - FPM daquele mês em 2020
+# em 4, o auxílio daquele mês da 173
+# ... 
+difCapitais=[]
+# a partir de fluxo capitais, lista com os diferenciais 2020 vs 2019
+# acumulado e mês a mês
+# em 0 e 1, código e nome da cidade, respectivamente
+# em 2, lista com os diferenciais mes a mes de arrecadacao (RCL-FPM)
+# em 3, lista com os diferenciais acumulados (RCL - FPM)
+listaMesMes=[]
+listaAcumulado=[]
+for cidade in dadosCapitais:
+  listaTemp=cidade[0:2]
+  listaTempdif=cidade[0:2]
+  listaTempdif.append([])
+  listaTempdif.append([])
+  ac2019=0
+  ac2020=0
+  for k in range(0,len(mesesCidades)):
+    if k < 5: #quando não se tinha ainda auxílio da 173
+      listaTemp=listaTemp+[cidade[2*k+3]-cidade[2*k+3+1]]+[cidade[2*k+3+2*len(mesesCidades)]-cidade[2*k+3+1+2*len(mesesCidades)]]+[0]
+    else: #a partir de junho, quando iniciou o auxílio
+      #quando entrar os novos auxílios, vou ter que melhorar essa regra do cidade[2]
+      listaTemp=listaTemp+[cidade[2*k+3]-cidade[2*k+3+1]]+[cidade[2*k+3+2*len(mesesCidades)]-cidade[2*k+3+1+2*len(mesesCidades)]]+[cidade[2]]
+    ac2019=ac2019+listaTemp[3*k+2]
+    ac2020=ac2020+listaTemp[3*k+3]
+    listaTempdif[2].append(listaTemp[3*k+3]/listaTemp[3*k+2]-1)
+    listaTempdif[3].append(ac2020/ac2019-1)
+  fluxoCapitais.append(listaTemp)
+  difCapitais.append(listaTempdif)
 
 
 ####
@@ -276,9 +361,10 @@ server=app.server #li em um tutorial q era necessario p o heroku
 app.title='LC 173 Monitora'
 app.css.append_css({'external_url': 'https://codepen.io/amyoshino/pen/jzXypZ.css'}) #Bootstrap CSS
 
-obs1="(1) Suficência do suporte é o [Total do suporte recebido nos termos da 173 + Arrecadacao (IPVA+ICMS) acumulada de 2020] / Arrecadacao (IPVA+ICMS) acumulada de 2019"
+obs1="(1) Suficência do suporte é o [Total do suporte recebido nos termos da 173 + Arrecadacao (IPVA+ICMS) acumulada de 2020] / Arrecadacao (IPVA+ICMS) acumulada de 2019. Para os Estados que não atualizaram o último mês de arrecadação, não se consideram também as medidas de suporte daquele mês."
 obs2="(2) Suspensão de dívida com a União"
 obs3="(3) Em verde os Estados que não apresentaram perda de arrecadação"
+obs4="(4) Para a consulta dos municípios, foram excluídas da Receita Corrente todas as Transações Correntes, exceto aquelas de cota-parte de ICMS e IPVA. Municípios que não apresentaram dados ou que apresentaram dados incompletos foram excluídos da contabilização."
 
 #alerta de ICMS desatualizado
 corAlerta="white"
@@ -390,6 +476,28 @@ app.layout = html.Div([
         ]), width={"size": 10, "offset": 1})
   ), #fim da row
 
+  #segunda linha contendodo o dropdown
+  dbc.Row(
+    #dropdown
+    dbc.Col(
+      #menu dropdown com a id para ser acessado via callback e a lista de opções geradas a partir do dataframe
+      dcc.Dropdown(
+          id='capital-dropdown',
+          options=[{'label':u[1],'value':u[0]} for u in dadosCapitais],
+          value=dadosCapitais[-3][1], #setando o valor base como o total das capitais, o antepenúltim item da lista
+          clearable=False) , width={"size": 10, "offset": 1}) 
+    ),
+
+   #linha contendo o gráfico de receitas das capitais
+  dbc.Row([
+    #gráfico
+    dbc.Col(
+      html.Div([
+         dcc.Graph(id='grafico-receita-cap')]),width={"size": 10, "offset": 1}),
+    ], align='center'),
+
+  #
+
    dbc.Row(
       dbc.Col(
         dbc.CardDeck([
@@ -397,21 +505,21 @@ app.layout = html.Div([
             dbc.CardBody([
               html.H5("MP 938", className="card-title"),
               html.P(
-                  "Recomposição, por 4 meses, dos repasses de FPM e de FPE ao nível do que foi realizado em 2019. "
-                  "Atualizado com os 4 pagamentos já realizados. Sem pagamentos pendentes, medida de apoio encerada."
+                  "Recomposição dos repasses de FPM e de FPE ao nível do que foi realizado em 2019. "
+                  "Atualizado com os 6 pagamentos já realizados até setembro, já considerando a nova rodada de recomposição de acordo com o PLV 26/20."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
               html.H5("Recursos LC 173", className="card-title"),
               html.P(
                   "Repasse de recursos definidos no Art. 5 da Lei Complementar 173, de 2020.  "
-                  "Dados atualizados com as parcelas de 09jun. Parcela de 13jul já foi paga. Duas parcelas ainda pendentes."
+                  "Dados atualizados com as parcelas de 09jun, 13jul e 12ago."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
               html.H5("Suspensão de Dívida LC 173", className="card-title"),
               html.P(
-                  "Dados atualizados de acordo com dados de suspensão de dívida dos Estados com União e com Instituições Financeiras Públicas.  "
+                  "Dados atualizados de acordo com dados de suspensão de dívida dos Estados com a União.  "
                   "Dívidas já suspensas anteriormente à pandemia não são contabilizadas."
                   ),]), style={"width": "18rem"},),
           ]) #fim do CardDeck
@@ -422,7 +530,7 @@ app.layout = html.Div([
       dbc.Col(
       html.Div([
         dbc.Card(
-            dbc.CardBody("Observações: " + obs1 + " " + obs2 + " " + obs3),
+            dbc.CardBody("Observações: " + obs1 + " " + obs2 + " " + obs3 + " " + obs4),
             className="mb-3",
         ),
     ]), width={"size": 10, "offset": 1},style={ 'margin-top': '1%'})
@@ -622,8 +730,36 @@ def update_output(value):
     bargap=0.15, # gap between bars of adjacent location coordinates.
     bargroupgap=0.1 # gap between bars of the same location coordinate.
   )
-  graficoSuf.update_yaxes(range=[50, 160]) # eixo y da figura customizado manualmente
+  graficoSuf.update_yaxes(range=[80, 180]) # eixo y da figura customizado manualmente
   return graficoSuf
+
+
+@app.callback( Output('grafico-receita-cap','figure'), [Input('capital-dropdown','value')])
+#Após o callback, teremos a função que fará o update no output de acordo com o valor (value) recebido (sacou?!?!)
+def update_output(value):
+
+
+    dadosCapital=retornaLinha(value,difCapitais,0)
+
+    graficoArrecadCap = make_subplots(specs=[[{"secondary_y": True}]])
+
+    graficoArrecadCap.add_trace(
+        go.Bar(x=mesesCidades, y=dadosCapital[2], name="Mês contra Mês"),
+        secondary_y=False,
+    )
+    # adicionando as series
+    graficoArrecadCap.add_trace(
+        go.Scatter(x=mesesCidades, y=dadosCapital[3], name="Acumulado"),
+        secondary_y=False, #se algum desses for true, habilita um segundo eixo
+    )
+    # Add figure title
+    graficoArrecadCap.update_layout(
+        title_text="Dados de Receita das Grandes Cidades -> 2020 vs. 2019 (4)",
+        legend_orientation="h"
+    )
+  
+    graficoArrecadCap.update_yaxes(title_text="Diferença", secondary_y=False)
+    return graficoArrecadCap
 
 #não esqueça desta linha para conseguir rodar sua aplicação
 if __name__ == '__main__':
