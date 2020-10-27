@@ -275,7 +275,7 @@ def retornaLinha(CidadeAlvo,listaAlvo,indiceLista):
 
 #### dados de cidades
 
-mesesCidades=['Janeiro','Fevereiro','Março','Abril','Maio','Junho']
+mesesCidades=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto"]
 
 arrecadMun=pd.read_excel(enderecoAlterna,sheet_name="MunicipiosArrecadacao",index_col=0).values.tolist()
 iniCapitais=pd.read_excel(enderecoAlterna,sheet_name="Capitais").values.tolist()
@@ -286,27 +286,33 @@ iniCapitais=pd.read_excel(enderecoAlterna,sheet_name="Capitais").values.tolist()
 # em 2 o auxílio da 173
 # de 3 em diante, nMeses pares de Receita Corrente e FPM
 dadosCapitais=[]
-for cidade in iniCapitais: 
-  listaTemp=[str(cidade[0]),cidade[1],cidade[2]]
-  for dArrecad in arrecadMun[:-3]: #tirei do loop as duas últimas linhas, que sao compilacoes de cidades medias e grandes
-    #vai procurar os dados de arrecadação de cada cidade
-    codIBGE=str(truncar(dArrecad[0],0))[:-2] #trunco, para ter ctza que tem uma casa, depois tiro o ponto e a casa
-    if listaTemp[0] == codIBGE:
-      listaTemp=listaTemp + dArrecad[1:]
-      dadosCapitais.append(listaTemp) #so vai para dados Capitais se tiver dados de arrecadacao
-#criando um total na parte inferior
-listaSoma=[0] * (len(dadosCapitais[0])-2) #cria uma lista de 0 eliminando os dois primeiros itens, que não são numéricos
-for cidade in dadosCapitais:
-   listaSoma=([sum(x) for x in zip(listaSoma, cidade[2:])]) #somando linha a linha da lista
-dadosCapitais.append(['Capitais','Capitais']+listaSoma)
+#esse for aqui de baixo eu mutei, ele servia para traçar especificamente as capitais e, ao final,
+#criar uma linha com a soma das capitais
+#for cidade in iniCapitais: 
+#  listaTemp=[str(cidade[0]),cidade[1],cidade[2]]
+#  for dArrecad in arrecadMun[:-3]: #tirei do loop as duas últimas linhas, que sao compilacoes de cidades medias e grandes
+#    #vai procurar os dados de arrecadação de cada cidade
+#    codIBGE=str(truncar(dArrecad[0],0))[:-2] #trunco, para ter ctza que tem uma casa, depois tiro o ponto e a casa
+#    if listaTemp[0] == codIBGE:
+#      listaTemp=listaTemp + dArrecad[1:]
+#      dadosCapitais.append(listaTemp) #so vai para dados Capitais se tiver dados de arrecadacao
+##criando um total na parte inferior
+#listaSoma=[0] * (len(dadosCapitais[0])-2) #cria uma lista de 0 eliminando os dois primeiros itens, que não são numéricos
+#for cidade in dadosCapitais:
+#   listaSoma=([sum(x) for x in zip(listaSoma, cidade[2:])]) #somando linha a linha da lista
+#dadosCapitais.append(['Capitais','Capitais']+listaSoma)
 
 #adicionando as duas ultimas linhas de arrecadMun, cidades grandes e medias
+cidadesGd=arrecadMun[-3][1:] #tirei o primeiro elemento, pois esse é so uma label
+cidGdLab='Acima de 1 milhão de hab.'
 cidadesMd=arrecadMun[-2][1:] #tirei o primeiro elemento, pois esse é so uma label
-cidMdLab='Entre 100 mil e 500 mil hab. (s/ capitais)'
+cidMdLab='Entre 1 milhão e 500mil hab.'
+cidadesPd=arrecadMun[-1][1:] #tirei o primeiro elemento, pois esse é so uma label
+cidPdLab='Entre 500mil e 100mil hab.'
 aux173Md=0 #futuramente, se quiser inserir o auxílio para os municípios demais, é aqui
-cidadesGd=arrecadMun[-1][1:]
-cidGdLab='Acima de 500 mil hab. (s/ capitais)'
 aux173Gd=0
+aux173Pd=0
+dadosCapitais.append([cidPdLab,cidPdLab,aux173Pd]+cidadesPd)
 dadosCapitais.append([cidMdLab,cidMdLab,aux173Md]+cidadesMd)
 dadosCapitais.append([cidGdLab,cidGdLab,aux173Gd]+cidadesGd)
 
