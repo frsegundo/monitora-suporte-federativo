@@ -275,7 +275,7 @@ def retornaLinha(CidadeAlvo,listaAlvo,indiceLista):
 
 #### dados de cidades
 
-mesesCidades=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto"]
+mesesCidades=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto']
 
 arrecadMun=pd.read_excel(enderecoAlterna,sheet_name="MunicipiosArrecadacao",index_col=0).values.tolist()
 iniCapitais=pd.read_excel(enderecoAlterna,sheet_name="Capitais").values.tolist()
@@ -286,8 +286,6 @@ iniCapitais=pd.read_excel(enderecoAlterna,sheet_name="Capitais").values.tolist()
 # em 2 o auxílio da 173
 # de 3 em diante, nMeses pares de Receita Corrente e FPM
 dadosCapitais=[]
-#esse for aqui de baixo eu mutei, ele servia para traçar especificamente as capitais e, ao final,
-#criar uma linha com a soma das capitais
 #for cidade in iniCapitais: 
 #  listaTemp=[str(cidade[0]),cidade[1],cidade[2]]
 #  for dArrecad in arrecadMun[:-3]: #tirei do loop as duas últimas linhas, que sao compilacoes de cidades medias e grandes
@@ -303,18 +301,23 @@ dadosCapitais=[]
 #dadosCapitais.append(['Capitais','Capitais']+listaSoma)
 
 #adicionando as duas ultimas linhas de arrecadMun, cidades grandes e medias
+
 cidadesGd=arrecadMun[-3][1:] #tirei o primeiro elemento, pois esse é so uma label
-cidGdLab='Acima de 1 milhão de hab.'
+cidGdLab='Cidades com mais de 1 milhão de habitantes.'
+
 cidadesMd=arrecadMun[-2][1:] #tirei o primeiro elemento, pois esse é so uma label
-cidMdLab='Entre 1 milhão e 500mil hab.'
-cidadesPd=arrecadMun[-1][1:] #tirei o primeiro elemento, pois esse é so uma label
-cidPdLab='Entre 500mil e 100mil hab.'
+cidMdLab='Entre 1 milhão e 500 mil habitantes.'
+
+cidadesPd=arrecadMun[-1][1:]
+cidPdLab='Entre 500mil e 100mil habitantes.'
+
 aux173Md=0 #futuramente, se quiser inserir o auxílio para os municípios demais, é aqui
-aux173Gd=0
 aux173Pd=0
-dadosCapitais.append([cidPdLab,cidPdLab,aux173Pd]+cidadesPd)
-dadosCapitais.append([cidMdLab,cidMdLab,aux173Md]+cidadesMd)
+aux173Gd=0
+
 dadosCapitais.append([cidGdLab,cidGdLab,aux173Gd]+cidadesGd)
+dadosCapitais.append([cidMdLab,cidMdLab,aux173Md]+cidadesMd)
+dadosCapitais.append([cidPdLab,cidPdLab,aux173Pd]+cidadesPd)
 
 
 fluxoCapitais=[]
@@ -401,7 +404,7 @@ app.layout = html.Div([
   dbc.Row([
     #head
     dbc.Col(dbc.Jumbotron([
-        html.H1("Suporte aos Entes Federativos", className="display-3"),
+        html.H1("Secretaria Especial de Fazenda", className="display-3"),
         html.P(
             "Monitoramento dos recursos de suporte aos Entes Federativos em meio à pandemia do COVID-19",
             className="lead",
@@ -519,7 +522,7 @@ app.layout = html.Div([
               html.H5("Recursos LC 173", className="card-title"),
               html.P(
                   "Repasse de recursos definidos no Art. 5 da Lei Complementar 173, de 2020.  "
-                  "Dados atualizados com as parcelas de 09jun, 13jul e 12ago."
+                  "Dados atualizados com as parcelas de 09jun, 13jul, 12ago e 11set."
                   ),]), style={"width": "18rem"},),
           dbc.Card(
             dbc.CardBody([
