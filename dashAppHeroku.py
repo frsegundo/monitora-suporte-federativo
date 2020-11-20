@@ -28,7 +28,7 @@ ICMS=pd.read_excel(enderecoAlterna,sheet_name="ICMS",index_col=0)
 IPVA=pd.read_excel(enderecoAlterna,sheet_name="IPVA",index_col=0)
 Rec173=pd.read_excel(enderecoAlterna,sheet_name="Recursos173",index_col=0)
 Sus173=pd.read_excel(enderecoAlterna,sheet_name="Suspensao173",index_col=0)
-nomeMeses=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro"]
+nomeMeses=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro"]
 beginner='TD' #estado que é plotado na abertura, se alterar aqui, alterar dentro de listaPorEstado
 benchSuficiencia=1.0 #barra de suficiência que sera benchmark para os indices que serao traçados
 textoArrecada='Não perdeu arrecadação.'
